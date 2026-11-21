@@ -1,4 +1,5 @@
 using KleeneStar.Core;
+using KleeneStar.Integration.WebManager;
 using KleeneStar.Model.Entities;
 using System;
 using WebExpress.WebCore;
@@ -34,10 +35,12 @@ namespace KleeneStar.Integration
         /// <summary>
         /// Initializes a new instance of the class. Invoked by WebExpress via reflection.
         /// </summary>
+        /// <param name="pluginContext">The plugin context, for the settings.</param>
         /// <param name="httpServerContext">The server context, for the log.</param>
         /// <param name="componentHub">The component hub the plugin's managers are resolved from.</param>
-        public KleeneStarPlugin(IHttpServerContext httpServerContext, IComponentHub componentHub)
+        public KleeneStarPlugin(IPluginContext pluginContext, IHttpServerContext httpServerContext, IComponentHub componentHub)
         {
+            IntegrationHub.WebhookSettings = WebhookSettings.From(pluginContext?.Settings);
             _httpServerContext = httpServerContext;
             IntegrationHub.ComponentHub = componentHub;
         }

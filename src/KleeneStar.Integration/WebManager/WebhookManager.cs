@@ -2,6 +2,7 @@ using KleeneStar.Automation;
 using KleeneStar.Automation.WebAutomation;
 using KleeneStar.Core;
 using KleeneStar.Core.WebManager;
+using KleeneStar.Core.WebNavigator;
 using KleeneStar.Core.WebParameter;
 using KleeneStar.Core.WebPermission;
 using KleeneStar.Core.WebRestApi;
@@ -13,10 +14,14 @@ using KleeneStar.Model.Entities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebComponent;
@@ -139,10 +144,18 @@ namespace KleeneStar.Integration.WebManager
                 problems.Add($"The workspace already has a webhook named '{webhook.Name}'.");
             }
 
-            if (webhook.Direction == WebhookDirection.Outgoing
-                && (!Uri.TryCreate(webhook.Url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)))
+            if (webhook.Direction == WebhookDirection.Outgoing)
             {
-                problems.Add("An outgoing webhook needs an absolute http or https address.");
+                if (!Uri.TryCreate(webhook.Url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                {
+                    problems.Add("An outgoing webhook needs an absolute http or https address.");
+                }
+                else if (!IntegrationHub.WebhookSettings.AllowPrivateNetwork
+                    && (uri.IsLoopback || (IPAddress.TryParse(uri.IdnHost, out var literal) && !IsAllowedTarget([literal]))))
+                {
+                    // names are resolved when a call connects; a literal or local name is refused here
+                    problems.Add("An outgoing webhook may not address this host or its private network.");
+                }
             }
 
             if (webhook.Direction == WebhookDirection.Incoming && IntegrationHub.IntegrationManager.Get(webhook.Integration ?? IntegrationManager.Generic) is null)
@@ -347,10 +360,103 @@ namespace KleeneStar.Integration.WebManager
         /// <summary>
         /// Gets the client of the outgoing calls.
         /// </summary>
-        private HttpClient Client => _client ??= new HttpClient(_transport ?? new SocketsHttpHandler(), disposeHandler: _transport is null)
+        /// <remarks>
+        /// The built-in transport follows no redirect (a redirect is a new target the receiver
+        /// chooses) and connects only to addresses <see cref="IsAllowedTarget"/> accepts, checked
+        /// when the connection opens, so a name that resolves elsewhere after validation is
+        /// caught as well.
+        /// </remarks>
+        private HttpClient Client => _client ??= new HttpClient(_transport ?? CreateTransport(), disposeHandler: _transport is null)
         {
             Timeout = Timeout
         };
+
+        /// <summary>
+        /// Creates the built-in transport of the outgoing calls.
+        /// </summary>
+        /// <returns>The transport.</returns>
+        private static SocketsHttpHandler CreateTransport()
+        {
+            return new SocketsHttpHandler
+            {
+                AllowAutoRedirect = false,
+                ConnectCallback = ConnectAsync
+            };
+        }
+
+        /// <summary>
+        /// Opens the connection of an outgoing call, once the target lies outside this host and
+        /// its private networks (unless <see cref="WebhookSettings.AllowPrivateNetwork"/>).
+        /// </summary>
+        /// <remarks>
+        /// Through a proxy the connection goes to the proxy; the target judged is then the host of
+        /// the request, which the proxy connects to.
+        /// </remarks>
+        /// <param name="context">The connection context.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>The stream of the connection.</returns>
+        /// <exception cref="HttpRequestException">The target is inside this host's network.</exception>
+        private static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, CancellationToken cancellationToken)
+        {
+            var endpoint = context.DnsEndPoint;
+            var addresses = await ResolveAsync(endpoint.Host, cancellationToken);
+
+            if (!IntegrationHub.WebhookSettings.AllowPrivateNetwork)
+            {
+                var target = context.InitialRequestMessage?.RequestUri?.IdnHost ?? endpoint.Host;
+                var targetAddresses = string.Equals(target, endpoint.Host, StringComparison.OrdinalIgnoreCase)
+                    ? addresses
+                    : await ResolveAsync(target, cancellationToken);
+
+                if (!IsAllowedTarget(targetAddresses))
+                {
+                    throw new HttpRequestException($"The address '{target}' lies inside this host or its private network, which outgoing webhooks may not reach.");
+                }
+            }
+
+            var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+
+            try
+            {
+                await socket.ConnectAsync(addresses, endpoint.Port, cancellationToken);
+
+                return new NetworkStream(socket, ownsSocket: true);
+            }
+            catch
+            {
+                socket.Dispose();
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Resolves a host name, or reads an address literal.
+        /// </summary>
+        /// <param name="host">The host.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>The addresses.</returns>
+        private static async Task<IPAddress[]> ResolveAsync(string host, CancellationToken cancellationToken)
+        {
+            return IPAddress.TryParse(host, out var literal)
+                ? [literal]
+                : await Dns.GetHostAddressesAsync(host, cancellationToken);
+        }
+
+        /// <summary>
+        /// Determines whether an outgoing webhook may connect to the given addresses: all of them
+        /// lie outside this host and its private networks.
+        /// </summary>
+        /// <remarks>
+        /// All addresses must qualify, so a name resolving to a public and an internal address
+        /// cannot be used to slip through.
+        /// </remarks>
+        /// <param name="addresses">The addresses a target resolves to.</param>
+        /// <returns><see langword="true"/> when the target may be reached.</returns>
+        public static bool IsAllowedTarget(IReadOnlyCollection<IPAddress> addresses)
+        {
+            return addresses is { Count: > 0 } && addresses.All(FaviconResolver.IsPubliclyRoutable);
+        }
 
         /// <summary>
         /// Generates a secret no one has to make up.

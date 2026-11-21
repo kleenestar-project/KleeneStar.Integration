@@ -33,7 +33,7 @@ The automation action `webhook <name>` posts the object and the event:
 
 with `X-KleeneStar-Delivery` (the same across retries - the receiver discards repeats) and `X-KleeneStar-Signature: sha256=<hex HMAC-SHA256 of the body under the secret>` (`WebhookManager.Sign`). Only `2xx` counts as delivered; anything else, a timeout (15 s) or an unreachable host fails the line, and the job retries it with the automation's backoff and parks it after the last attempt. The outcome of every call is kept in `LastResult`. A rule naming a webhook the workspace does not have (or an incoming one) is refused when it is saved.
 
-`WebhookManager.Transport` replaces the HTTP handler - in tests, or to route calls through a proxy. Outgoing addresses are set by workspace administrators and may point into the internal network on purpose (a Jenkins in the intranet).
+`WebhookManager.Transport` replaces the HTTP handler in tests. The built-in transport follows no redirect and connects only to addresses outside this host and its private networks (loopback, link local, `10/8`, `172.16/12`, `192.168/16`, `100.64/10`, unique local IPv6), judged per connection after name resolution, so a name that resolves inward later is refused as well; through a proxy the host of the request is judged. Outgoing addresses are set by workspace administrators and the answer comes back in `LastResult`, so an open transport would let them probe services inside the network. An installation whose receivers sit in the private network (a Jenkins in the intranet) allows them with `Plugins:kleenestar.integration:Webhooks:AllowPrivateNetwork` set to `true` (`WebhookSettings`); `Validate` then also accepts literal private addresses and `localhost`.
 
 ## Integration plugins
 

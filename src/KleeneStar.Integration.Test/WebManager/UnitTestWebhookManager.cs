@@ -102,6 +102,81 @@ namespace KleeneStar.Integration.Test.WebManager
         }
 
         /// <summary>
+        /// An outgoing webhook addressing this host or a private network by literal or local name
+        /// is refused, unless the installation allows the private network.
+        /// </summary>
+        [Theory]
+        [InlineData("http://localhost:8080/hook")]
+        [InlineData("http://127.0.0.1/hook")]
+        [InlineData("http://169.254.169.254/latest/meta-data/")]
+        [InlineData("http://10.0.0.5/hook")]
+        [InlineData("http://192.168.1.10/hook")]
+        [InlineData("http://[::1]/hook")]
+        public void Validate_RefusesPrivateTargets(string url)
+        {
+            Seed(nameof(Validate_RefusesPrivateTargets));
+
+            var webhook = new Webhook { WorkspaceId = WorkspaceId, Name = "out", Direction = WebhookDirection.Outgoing, Url = url };
+            var previous = IntegrationHub.WebhookSettings;
+
+            try
+            {
+                Assert.Contains(IntegrationHub.WebhookManager.Validate(webhook), x => x.Contains("private network", StringComparison.Ordinal));
+
+                IntegrationHub.WebhookSettings = new WebhookSettings { AllowPrivateNetwork = true };
+
+                Assert.Empty(IntegrationHub.WebhookManager.Validate(webhook));
+            }
+            finally
+            {
+                IntegrationHub.WebhookSettings = previous;
+            }
+        }
+
+        /// <summary>
+        /// The built-in transport refuses to connect to a private address, even when the stored
+        /// address changed after validation, and records the refusal as the last result.
+        /// </summary>
+        [Fact]
+        public void Deliver_RefusesToConnectToPrivateTargets()
+        {
+            Seed(nameof(Deliver_RefusesToConnectToPrivateTargets));
+
+            var manager = (WebhookManager)IntegrationHub.WebhookManager;
+            var previous = manager.Transport;
+
+            manager.Transport = null;
+
+            try
+            {
+                var webhook = new Webhook { WorkspaceId = WorkspaceId, Name = "out", Direction = WebhookDirection.Outgoing, Url = "https://ci.example.com/hook", Secret = "0123456789abcdef0123" };
+                manager.AddWebhook(webhook);
+
+                webhook.Url = "http://127.0.0.1:9/hook";
+
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.Deliver(webhook, [], "delivery"));
+
+                Assert.Contains("private network", ex.Message, StringComparison.Ordinal);
+                Assert.Contains("private network", manager.GetWebhook(webhook.Id).LastResult, StringComparison.Ordinal);
+            }
+            finally
+            {
+                manager.Transport = previous;
+            }
+        }
+
+        /// <summary>
+        /// Public addresses qualify as targets; any private one among them disqualifies the name.
+        /// </summary>
+        [Fact]
+        public void IsAllowedTarget_RequiresEveryAddressToBePublic()
+        {
+            Assert.True(WebhookManager.IsAllowedTarget([IPAddress.Parse("93.184.216.34")]));
+            Assert.False(WebhookManager.IsAllowedTarget([IPAddress.Parse("93.184.216.34"), IPAddress.Parse("10.1.2.3")]));
+            Assert.False(WebhookManager.IsAllowedTarget([]));
+        }
+
+        /// <summary>
         /// A new webhook gets a generated secret; only that secret opens an active incoming hook,
         /// and an update without a secret keeps it.
         /// </summary>

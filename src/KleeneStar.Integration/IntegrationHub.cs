@@ -28,5 +28,11 @@ namespace KleeneStar.Integration
         /// Gets the catalog of integrations that read the payloads of other systems.
         /// </summary>
         public static IIntegrationManager IntegrationManager => _integrationManager ??= (ComponentHub ?? CoreHub.ComponentHub)?.GetComponentManager<IntegrationManager>();
+
+        /// <summary>
+        /// Gets or sets the settings of the outgoing webhooks; the defaults until the plugin read
+        /// its settings.
+        /// </summary>
+        public static WebhookSettings WebhookSettings { get; set; } = new();
     }
 }
