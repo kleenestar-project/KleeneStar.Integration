@@ -1,0 +1,45 @@
+﻿# en-US language resource file
+plugin.name=KleeneStar.Integration
+plugin.description=Webhooks and integrations (GitLab, Jenkins, Automic) for the automation of the KleeneStar platform.
+
+# webhooks and integrations
+integration.manage.label=Integrations
+integration.manage.title=Integrations
+integration.manage.description=Webhooks connect this workspace to other systems. Another system calls an incoming webhook to report what happened to an object - a push, a build, a deployment - and the automation rules on 'Event of another system' decide what follows. Rules call an outgoing webhook with the action 'webhook <name>'; every call is signed, retried and parked like any automation job.
+integration.generic.label=Generic (JSON: object, event, id)
+integration.api.hooks.title=Incoming webhooks
+integration.api.webhooks.title=Webhooks
+integration.api.webhooks.delete.title=Delete webhook
+integration.webhook.add=New webhook
+integration.webhook.empty=This workspace has no webhooks yet.
+integration.webhook.title=Webhook
+integration.webhook.name=Name
+integration.webhook.name.help=The name rules call the webhook by, without blanks.
+integration.webhook.direction=Direction
+integration.webhook.direction.incoming=Incoming - another system calls
+integration.webhook.direction.outgoing=Outgoing - rules call another system
+integration.webhook.target=Address
+integration.webhook.state=State
+integration.webhook.state.active=Active
+integration.webhook.state.disabled=Disabled
+integration.webhook.last=Last delivery
+integration.webhook.address=Address
+integration.webhook.token=Token
+integration.webhook.incoming.help=Configure the other system to POST to this address with the token as 'Authorization: Bearer <token>' or appended as '&token=<token>'. Only objects of this workspace are reached.
+integration.webhook.url=Target address (outgoing)
+integration.webhook.url.help=The http or https address the call is posted to. The body is signed: X-KleeneStar-Signature = sha256=<HMAC of the body under the secret>; X-KleeneStar-Delivery stays the same across retries.
+integration.webhook.integration=Integration (incoming)
+integration.webhook.secret=Secret
+integration.webhook.secret.help=At least 16 characters. Empty generates one for a new webhook and keeps the one in use for an existing one.
+integration.webhook.save=Save webhook
+integration.webhook.delete.title=Delete webhook
+integration.webhook.delete.description=The other system can no longer call it, and rules calling it fail from now on.
+
+integration.gitlab.label=GitLab (push, merge request, pipeline, deployment)
+integration.jenkins.label=Jenkins (build notifications)
+integration.automic.label=Automic (job results)
+
+# automation trigger and action
+automation.trigger.integration.received=Event of another system
+automation.trigger.integration.received.parameter=the event or the webhook name (empty: any)
+automation.action.webhook=webhook <name>

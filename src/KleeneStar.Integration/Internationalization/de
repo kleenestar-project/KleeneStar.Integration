@@ -1,0 +1,45 @@
+﻿# de-DE language resource file
+plugin.name=KleeneStar.Integration
+plugin.description=Webhooks und Integrationen (GitLab, Jenkins, Automic) für die Automatisierung der KleeneStar-Plattform.
+
+# webhooks and integrations
+integration.manage.label=Integrationen
+integration.manage.title=Integrationen
+integration.manage.description=Webhooks verbinden diesen Workspace mit anderen Systemen. Ein anderes System ruft einen eingehenden Webhook auf, um zu melden, was mit einem Objekt geschehen ist - ein Push, ein Build, ein Deployment - und die Automatisierungsregeln auf 'Ereignis eines anderen Systems' entscheiden, was folgt. Regeln rufen einen ausgehenden Webhook mit der Aktion 'webhook <Name>' auf; jeder Aufruf wird signiert, wiederholt und bei Dauerfehlern geparkt wie jeder Automatisierungsjob.
+integration.generic.label=Generisch (JSON: object, event, id)
+integration.api.hooks.title=Eingehende Webhooks
+integration.api.webhooks.title=Webhooks
+integration.api.webhooks.delete.title=Webhook löschen
+integration.webhook.add=Neuer Webhook
+integration.webhook.empty=Dieser Workspace hat noch keine Webhooks.
+integration.webhook.title=Webhook
+integration.webhook.name=Name
+integration.webhook.name.help=Der Name, unter dem Regeln den Webhook aufrufen, ohne Leerzeichen.
+integration.webhook.direction=Richtung
+integration.webhook.direction.incoming=Eingehend - ein anderes System ruft auf
+integration.webhook.direction.outgoing=Ausgehend - Regeln rufen ein anderes System auf
+integration.webhook.target=Adresse
+integration.webhook.state=Status
+integration.webhook.state.active=Aktiv
+integration.webhook.state.disabled=Deaktiviert
+integration.webhook.last=Letzte Zustellung
+integration.webhook.address=Adresse
+integration.webhook.token=Token
+integration.webhook.incoming.help=Richten Sie das andere System so ein, dass es per POST an diese Adresse sendet, mit dem Token als 'Authorization: Bearer <Token>' oder angehängt als '&token=<Token>'. Erreicht werden nur Objekte dieses Workspaces.
+integration.webhook.url=Zieladresse (ausgehend)
+integration.webhook.url.help=Die http- oder https-Adresse, an die der Aufruf gesendet wird. Der Inhalt ist signiert: X-KleeneStar-Signature = sha256=<HMAC des Inhalts mit dem Geheimnis>; X-KleeneStar-Delivery bleibt bei Wiederholungen gleich.
+integration.webhook.integration=Integration (eingehend)
+integration.webhook.secret=Geheimnis
+integration.webhook.secret.help=Mindestens 16 Zeichen. Leer erzeugt für einen neuen Webhook eines und behält bei einem bestehenden das bisherige.
+integration.webhook.save=Webhook speichern
+integration.webhook.delete.title=Webhook löschen
+integration.webhook.delete.description=Das andere System kann ihn nicht mehr aufrufen, und Regeln, die ihn aufrufen, schlagen ab jetzt fehl.
+
+integration.gitlab.label=GitLab (Push, Merge Request, Pipeline, Deployment)
+integration.jenkins.label=Jenkins (Build-Benachrichtigungen)
+integration.automic.label=Automic (Job-Ergebnisse)
+
+# automation trigger and action
+automation.trigger.integration.received=Ereignis eines anderen Systems
+automation.trigger.integration.received.parameter=das Ereignis oder der Name des Webhooks (leer: beliebig)
+automation.action.webhook=webhook <Name>
