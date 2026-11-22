@@ -51,7 +51,7 @@ dotnet build KleeneStar.Integration/src/KleeneStar.Integration/KleeneStar.Integr
 
 ```
 dotnet build KleeneStar.Integration/src/KleeneStar.Integration.Test
-KleeneStar.Integration/src/KleeneStar.Integration.Test/bin/Debug/net10.0/KleeneStar.Integration.Test.exe
+KleeneStar.Integration/src/KleeneStar.Integration.Test/bin/Debug/net11.0/KleeneStar.Integration.Test.exe
 ```
 
 ## Legal & Licensing

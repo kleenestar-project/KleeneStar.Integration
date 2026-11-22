@@ -14,6 +14,7 @@ namespace KleeneStar.Integration.Test.WebIntegration
     /// Tests the development integrations: each reads its system's payload into events on the
     /// objects named in it, with the other system's own identity of the event as occurrence.
     /// </summary>
+    [Collection("NonParallelTests")]
     public class UnitTestDevIntegrations
     {
         /// <summary>
